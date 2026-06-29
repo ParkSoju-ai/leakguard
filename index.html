@@ -453,6 +453,17 @@
     0%,100% { opacity: 1; }
     50% { opacity: 0; }
   }
+
+  .ticker-link {
+    color: inherit;            /* Inherits your dim/accent text color automatically */
+    text-decoration: none;     /* Removes the default underline */
+    transition: color 0.2s;
+}
+
+.ticker-link:hover {
+    color: var(--accent);      /* Glows up with your accent color when hovered! */
+}
+  
 </style>
 </head>
 <body>
@@ -460,7 +471,10 @@
 <header>
   <div class="header-left">
     <div class="status-dot"></div>
+  <!--    <span>LEAKGUARD v1.0.0 :: ACTIVE</span>-->
+    <a href="https://parksoju-ai.github.io/leakguard/" class="ticker-link" target="_blank" rel="noopener noreferrer">
     <span>LEAKGUARD v1.0.0 :: ACTIVE</span>
+</a>
   </div>
   <div class="header-right">root@leakguard:~# &nbsp;|&nbsp; PUBLIC REPO SCANNER</div>
 </header>

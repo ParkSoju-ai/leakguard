@@ -3,24 +3,29 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>LeakGuard — Secret Scanner</title>
+<title>LeakGuard — GitHub Secret Scanner | Scan Before They Do</title>
+<meta name="description" content="LeakGuard is a free, open-source browser tool that scans your public GitHub repositories for exposed API keys, passwords, tokens, and secrets. 100% client-side, no data stored."/>
+<meta name="keywords" content="github secret scanner, api key leak, leaked credentials, security tool, open source"/>
+<meta property="og:title" content="LeakGuard — GitHub Secret Scanner"/>
+<meta property="og:description" content="Scan your own GitHub repo for exposed secrets before someone else finds them. Free, browser-based, no data stored."/>
+<meta property="og:type" content="website"/>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap');
 
   :root {
-    --black:    #000000;
-    --bg:       #0a0a0a;
-    --surface:  #0d0d0d;
-    --green:    #00ff41;
-    --green2:   #00cc33;
-    --green-dim:#00ff4133;
+    --black:      #000000;
+    --bg:         #0a0a0a;
+    --surface:    #0d0d0d;
+    --green:      #00ff41;
+    --green2:     #00cc33;
+    --green-dim:  #00ff4133;
     --green-glow: 0 0 8px #00ff41, 0 0 20px #00ff4166;
-    --cyan:     #00eeff;
-    --red:      #ff2244;
-    --yellow:   #ffcc00;
-    --muted:    #3a5c3a;
-    --mono:     'Share Tech Mono', 'Courier New', monospace;
-    --vt:       'VT323', monospace;
+    --cyan:       #00eeff;
+    --red:        #ff2244;
+    --yellow:     #ffcc00;
+    --muted:      #3a5c3a;
+    --mono:       'Share Tech Mono', 'Courier New', monospace;
+    --vt:         'VT323', monospace;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -33,23 +38,20 @@
     overflow-x: hidden;
   }
 
-  /* scanline overlay */
+  /* CRT scanline overlay */
   body::before {
     content: '';
     position: fixed;
     inset: 0;
     background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0,0,0,0.07) 2px,
-      rgba(0,0,0,0.07) 4px
+      0deg, transparent, transparent 2px,
+      rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px
     );
     pointer-events: none;
     z-index: 9999;
   }
 
-  /* HEADER */
+  /* ── HEADER ── */
   header {
     border-bottom: 1px solid var(--muted);
     padding: 12px 24px;
@@ -59,9 +61,7 @@
     font-size: 12px;
     color: var(--muted);
   }
-
   .header-left { display: flex; align-items: center; gap: 16px; }
-
   .status-dot {
     width: 8px; height: 8px;
     background: var(--green);
@@ -69,38 +69,19 @@
     box-shadow: var(--green-glow);
     animation: blink 2s infinite;
   }
-
-  @keyframes blink {
-    0%,100% { opacity: 1; }
-    50% { opacity: 0.3; }
-  }
-
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
   .header-right { color: var(--muted); font-size: 12px; }
 
-  /* MAIN */
+  /* ── MAIN ── */
   main {
     max-width: 860px;
     margin: 0 auto;
     padding: 32px 24px 80px;
-    margin-top: 7%;
+    margin-top: 5%;
   }
 
-  /* ASCII BANNER */
-  .ascii-banner {
-    text-align: center;
-    margin-bottom: 8px;
-    line-height: 1.15;
-  }
-
-  .ascii-art {
-    font-family: var(--mono);
-    font-size: clamp(7px, 1.4vw, 13px);
-    color: var(--green);
-    text-shadow: var(--green-glow);
-    white-space: pre;
-    display: inline-block;
-    letter-spacing: 0;
-  }
+  /* ── ASCII BANNER ── */
+  .ascii-banner { text-align: center; margin-bottom: 8px; line-height: 1.15; }
 
   .ascii-shield {
     font-family: var(--mono);
@@ -113,6 +94,16 @@
     letter-spacing: 0;
   }
 
+  .ascii-art {
+    font-family: var(--mono);
+    font-size: clamp(7px, 1.4vw, 13px);
+    color: var(--green);
+    text-shadow: var(--green-glow);
+    white-space: pre;
+    display: inline-block;
+    letter-spacing: 0;
+  }
+
   .tagline {
     font-family: var(--vt);
     font-size: 22px;
@@ -120,15 +111,44 @@
     letter-spacing: 3px;
     margin-bottom: 4px;
   }
-
   .version-line {
     font-size: 12px;
     color: var(--muted);
     margin-bottom: 32px;
     letter-spacing: 2px;
   }
+  .cursor {
+    display: inline-block; width: 8px; height: 14px;
+    background: var(--green);
+    animation: cursor-blink 1s step-end infinite;
+    vertical-align: middle; margin-left: 2px;
+    box-shadow: var(--green-glow);
+  }
+  @keyframes cursor-blink { 0%,100%{opacity:1} 50%{opacity:0} }
 
-  /* TERMINAL WINDOW */
+  /* ── DISCLAIMER BOX ── */
+  .disclaimer-box {
+    border: 1px solid var(--yellow);
+    background: rgba(255,204,0,0.04);
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--yellow);
+  }
+  .disclaimer-box .disc-title {
+    font-size: 13px;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .disclaimer-box ul {
+    list-style: none;
+    padding: 0;
+  }
+  .disclaimer-box ul li::before { content: '[!] '; color: var(--red); }
+
+  /* ── TERMINAL WINDOW ── */
   .terminal {
     background: var(--surface);
     border: 1px solid var(--muted);
@@ -137,333 +157,174 @@
     margin-bottom: 24px;
     box-shadow: 0 0 30px rgba(0,255,65,0.05);
   }
-
   .term-titlebar {
     background: #111;
     border-bottom: 1px solid var(--muted);
     padding: 8px 14px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 12px;
-    color: var(--muted);
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px; color: var(--muted);
   }
-
   .term-dots { display: flex; gap: 6px; }
-  .term-dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    background: var(--muted);
-  }
+  .term-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
   .term-dot.r { background: #ff5f57; }
   .term-dot.y { background: #febc2e; }
   .term-dot.g { background: #28c840; }
-
   .term-title { flex: 1; text-align: center; font-size: 12px; letter-spacing: 2px; }
-
   .term-body { padding: 20px; }
 
-  /* input line */
+  .term-init { font-size: 13px; color: var(--muted); margin-bottom: 14px; line-height: 1.8; }
+
+  .term-divider { border: none; border-top: 1px solid #1a2a1a; margin: 14px 0; }
+
+  /* ── INPUT ── */
   .prompt-line {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 6px;
+    display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
   }
-
-  .prompt-sym {
-    color: var(--green);
-    font-size: 14px;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-
+  .prompt-sym { color: var(--green); font-size: 14px; white-space: nowrap; flex-shrink: 0; }
   .prompt-input {
-    flex: 1;
-    background: transparent;
-    border: none;
-    outline: none;
-    font-family: var(--mono);
-    font-size: 14px;
-    color: var(--cyan);
-    caret-color: var(--green);
-    opacity: 80%;
+    flex: 1; background: transparent; border: none; outline: none;
+    font-family: var(--mono); font-size: 14px;
+    color: var(--cyan); caret-color: var(--green); opacity: 0.9;
   }
-
   .prompt-input::placeholder { color: var(--muted); }
-
-  .term-divider {
-    border: none;
-    border-top: 1px solid #1a2a1a;
-    margin: 14px 0;
-  }
 
   .btn-scan {
     background: transparent;
     border: 1px solid var(--green);
     color: var(--green);
-    font-family: var(--mono);
-    font-size: 13px;
-    padding: 8px 20px;
-    cursor: pointer;
+    font-family: var(--mono); font-size: 13px;
+    padding: 8px 20px; cursor: pointer;
     letter-spacing: 2px;
     text-shadow: var(--green-glow);
     box-shadow: 0 0 10px rgba(0,255,65,0.2);
-    transition: all 0.2s;
-    margin-top: 4px;
+    transition: all 0.2s; margin-top: 4px;
   }
-
-  .btn-scan:hover {
-    background: var(--green-dim);
-    box-shadow: 0 0 20px rgba(0,255,65,0.4);
-  }
-
-  .btn-scan:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-  }
+  .btn-scan:hover { background: var(--green-dim); box-shadow: 0 0 20px rgba(0,255,65,0.4); }
+  .btn-scan:disabled { opacity: 0.3; cursor: not-allowed; }
 
   .term-hint {
-    font-size: 12px;
-    color: var(--muted);
-    margin-top: 10px;
-    letter-spacing: 1px;
+    font-size: 11px; color: var(--muted); margin-top: 10px; letter-spacing: 1px;
   }
-
   .term-hint::before { content: '# '; }
 
-  /* PROGRESS */
+  /* ── PROGRESS ── */
   #progress { display: none; margin-top: 16px; }
-
-  .prog-label {
-    font-size: 12px;
-    color: var(--green);
-    margin-bottom: 6px;
-    letter-spacing: 1px;
-  }
-
+  .prog-label { font-size: 12px; color: var(--green); margin-bottom: 6px; letter-spacing: 1px; }
   .prog-label::before { content: '[*] '; color: var(--cyan); }
-
   .prog-bar-wrap {
-    background: #111;
-    border: 1px solid var(--muted);
-    height: 6px;
-    border-radius: 0;
-    overflow: hidden;
+    background: #111; border: 1px solid var(--muted); height: 6px; overflow: hidden;
   }
-
   .prog-bar-fill {
-    height: 100%;
-    background: var(--green);
-    width: 0%;
-    transition: width 0.3s ease;
-    box-shadow: var(--green-glow);
+    height: 100%; background: var(--green); width: 0%;
+    transition: width 0.3s ease; box-shadow: var(--green-glow);
   }
-
-  /* OUTPUT LOG */
   #output-log {
-    margin-top: 14px;
-    font-size: 12px;
-    line-height: 1.7;
-    max-height: 120px;
-    overflow-y: auto;
-    color: var(--muted);
+    margin-top: 14px; font-size: 12px; line-height: 1.7;
+    max-height: 120px; overflow-y: auto; color: var(--muted);
   }
-
   #output-log::-webkit-scrollbar { width: 4px; }
   #output-log::-webkit-scrollbar-thumb { background: var(--muted); }
-
   .log-line { display: block; }
-  .log-line.ok { color: var(--green); }
+  .log-line.ok   { color: var(--green); }
   .log-line.info { color: var(--cyan); }
   .log-line.warn { color: var(--yellow); }
-  .log-line.err { color: var(--red); }
+  .log-line.err  { color: var(--red); }
 
-  /* RESULTS */
+  /* ── RATE LIMIT WARNING ── */
+  .rate-warn {
+    border: 1px solid var(--yellow);
+    background: rgba(255,204,0,0.04);
+    padding: 10px 14px;
+    font-size: 12px; color: var(--yellow);
+    margin-bottom: 12px; letter-spacing: 1px;
+    display: none;
+  }
+  .rate-warn::before { content: '[!] RATE LIMIT: '; color: var(--red); }
+
+  /* ── RESULTS ── */
   #results { margin-top: 8px; }
 
   .summary-header {
     border: 1px solid var(--muted);
-    padding: 14px 18px;
-    margin-bottom: 14px;
-    font-size: 13px;
-    letter-spacing: 1px;
+    padding: 14px 18px; margin-bottom: 14px;
+    font-size: 13px; letter-spacing: 1px;
   }
-
   .summary-header .s-title {
-    color: var(--cyan);
-    font-size: 14px;
-    margin-bottom: 10px;
-    letter-spacing: 2px;
+    color: var(--cyan); font-size: 14px; margin-bottom: 10px; letter-spacing: 2px;
   }
-
   .summary-header .s-title::before { content: '[+] '; color: var(--green); }
-
   .stat-row { display: flex; gap: 24px; flex-wrap: wrap; }
-
   .stat { font-size: 12px; }
   .stat .val { font-size: 20px; font-family: var(--vt); margin-right: 6px; }
   .stat.danger .val { color: var(--red); text-shadow: 0 0 8px var(--red); }
-  .stat.warn .val { color: var(--yellow); text-shadow: 0 0 8px var(--yellow); }
-  .stat.ok .val { color: var(--green); text-shadow: var(--green-glow); }
+  .stat.warn   .val { color: var(--yellow); text-shadow: 0 0 8px var(--yellow); }
+  .stat.ok     .val { color: var(--green); text-shadow: var(--green-glow); }
 
-  /* FINDING */
-  .finding {
-    border: 1px solid #1a2a1a;
-    margin-bottom: 8px;
-    font-size: 13px;
-  }
-
-  .finding.danger { border-left: 3px solid var(--red); }
+  /* ── FINDING CARD ── */
+  .finding { border: 1px solid #1a2a1a; margin-bottom: 8px; font-size: 13px; }
+  .finding.danger  { border-left: 3px solid var(--red); }
   .finding.warning { border-left: 3px solid var(--yellow); }
-
   .finding-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
-    cursor: pointer;
-    background: #0a0a0a;
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; cursor: pointer; background: #0a0a0a;
   }
-
   .finding-header:hover { background: #0f0f0f; }
-
-  .sev-tag {
-    font-size: 10px;
-    padding: 2px 7px;
-    letter-spacing: 1px;
-    flex-shrink: 0;
-  }
-
-  .danger .sev-tag { color: var(--red); border: 1px solid var(--red); }
+  .sev-tag { font-size: 10px; padding: 2px 7px; letter-spacing: 1px; flex-shrink: 0; }
+  .danger  .sev-tag { color: var(--red);    border: 1px solid var(--red); }
   .warning .sev-tag { color: var(--yellow); border: 1px solid var(--yellow); }
-
-  .finding-name { flex: 1; color: var(--green); letter-spacing: 1px; }
-  .finding-file { font-size: 12px; color: var(--muted); }
-  .finding-chevron { color: var(--muted); font-size: 12px; transition: transform 0.2s; }
+  .finding-name     { flex: 1; color: var(--green); letter-spacing: 1px; }
+  .finding-file     { font-size: 11px; color: var(--muted); }
+  .finding-chevron  { color: var(--muted); font-size: 11px; transition: transform 0.2s; }
   .finding.open .finding-chevron { transform: rotate(90deg); }
-
   .finding-body {
-    display: none;
-    padding: 12px 14px;
-    border-top: 1px solid #1a2a1a;
-    background: #070707;
+    display: none; padding: 12px 14px;
+    border-top: 1px solid #1a2a1a; background: #070707;
   }
-
   .finding.open .finding-body { display: block; }
 
   .code-block {
-    background: #000;
-    border: 1px solid #1a2a1a;
+    background: #000; border: 1px solid #1a2a1a;
     border-left: 2px solid var(--red);
-    padding: 10px 14px;
-    font-size: 12px;
-    color: var(--red);
-    overflow-x: auto;
-    margin: 10px 0;
-    word-break: break-all;
-    line-height: 1.6;
+    padding: 10px 14px; font-size: 12px; color: var(--red);
+    overflow-x: auto; margin: 10px 0; word-break: break-all; line-height: 1.6;
   }
-
   .code-block::before {
-    content: attr(data-file) ' [line ' attr(data-line) ']';
-    display: block;
-    color: var(--muted);
-    font-size: 10px;
-    margin-bottom: 6px;
-    letter-spacing: 1px;
+    content: attr(data-file) '  [line ' attr(data-line) ']';
+    display: block; color: var(--muted);
+    font-size: 10px; margin-bottom: 6px; letter-spacing: 1px;
   }
-
   .fix-block {
-    border: 1px solid #1a3a1a;
-    padding: 10px 14px;
-    font-size: 12px;
-    color: var(--green2);
-    line-height: 1.7;
+    border: 1px solid #1a3a1a; padding: 10px 14px;
+    font-size: 12px; color: var(--green2); line-height: 1.7;
   }
+  .fix-block::before { content: '[FIX] '; color: var(--cyan); letter-spacing: 1px; }
 
-  .fix-block::before {
-    content: '[FIX] ';
-    color: var(--cyan);
-    letter-spacing: 1px;
-  }
-
-  /* CLEAN STATE */
-  .clean-state {
-    border: 1px solid var(--muted);
-    padding: 32px;
-    text-align: center;
-  }
-
+  /* ── CLEAN STATE ── */
+  .clean-state { border: 1px solid var(--muted); padding: 32px; text-align: center; }
   .clean-ascii {
-    font-family: var(--mono);
-    font-size: 12px;
-    color: var(--green);
-    text-shadow: var(--green-glow);
-    white-space: pre;
-    display: inline-block;
-    margin-bottom: 14px;
+    font-family: var(--mono); font-size: 11px; color: var(--green);
+    text-shadow: var(--green-glow); white-space: pre;
+    display: inline-block; margin-bottom: 14px;
   }
-
   .clean-msg {
-    font-family: var(--vt);
-    font-size: 28px;
-    color: var(--green);
-    text-shadow: var(--green-glow);
-    letter-spacing: 3px;
-    margin-bottom: 8px;
+    font-family: var(--vt); font-size: 28px; color: var(--green);
+    text-shadow: var(--green-glow); letter-spacing: 3px; margin-bottom: 8px;
   }
-
   .clean-sub { font-size: 12px; color: var(--muted); letter-spacing: 1px; }
 
-  /* ERROR */
+  /* ── ERROR ── */
   .err-block {
-    border: 1px solid var(--red);
-    padding: 12px 16px;
-    font-size: 13px;
-    color: var(--red);
-    letter-spacing: 1px;
+    border: 1px solid var(--red); padding: 12px 16px;
+    font-size: 13px; color: var(--red); letter-spacing: 1px;
   }
-
   .err-block::before { content: '[-] ERROR: '; }
 
-  /* FOOTER */
+  /* ── FOOTER ── */
   footer {
-    border-top: 1px solid #1a2a1a;
-    padding: 16px 24px;
-    text-align: center;
-    font-size: 12px;
-    color: var(--muted);
-    letter-spacing: 2px;
+    border-top: 1px solid #1a2a1a; padding: 16px 24px;
+    text-align: center; font-size: 11px;
+    color: var(--muted); letter-spacing: 2px;
   }
-
-  /* CURSOR BLINK */
-  .cursor {
-    display: inline-block;
-    width: 8px;
-    height: 14px;
-    background: var(--green);
-    animation: cursor-blink 1s step-end infinite;
-    vertical-align: middle;
-    margin-left: 2px;
-    box-shadow: var(--green-glow);
-  }
-
-  @keyframes cursor-blink {
-    0%,100% { opacity: 1; }
-    50% { opacity: 0; }
-  }
-
-  .ticker-link {
-    color: inherit;            /* Inherits your dim/accent text color automatically */
-    text-decoration: none;     /* Removes the default underline */
-    transition: color 0.2s;
-}
-
-.ticker-link:hover {
-    color: var(--accent);      /* Glows up with your accent color when hovered! */
-}
-  
 </style>
 </head>
 <body>
@@ -471,10 +332,7 @@
 <header>
   <div class="header-left">
     <div class="status-dot"></div>
-  <!--    <span>LEAKGUARD v1.0.0 :: ACTIVE</span>-->
-    <a href="#" class="ticker-link">
     <span>LEAKGUARD v1.0.0 :: ACTIVE</span>
-</a>
   </div>
   <div class="header-right">root@leakguard:~# &nbsp;|&nbsp; PUBLIC REPO SCANNER</div>
 </header>
@@ -483,6 +341,17 @@
 
   <!-- ASCII SHIELD + BANNER -->
   <div class="ascii-banner">
+    <pre class="ascii-shield">
+        /\
+       /  \
+      / /\ \
+     / /  \ \
+    /_/ LG \_\
+    \_________/
+     \       /
+      \_____/
+        |||
+    </pre>
     <pre class="ascii-art">
  ██╗     ███████╗ █████╗ ██╗  ██╗ ██████╗ ██╗   ██╗ █████╗ ██████╗ ██████╗
  ██║     ██╔════╝██╔══██╗██║ ██╔╝██╔════╝ ██║   ██║██╔══██╗██╔══██╗██╔══██╗
@@ -491,9 +360,25 @@
  ███████╗███████╗██║  ██║██║  ██╗╚██████╔╝╚██████╔╝██║  ██║██║  ██║██████╔╝
  ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝
     </pre>
-
     <div class="tagline">:: SECRET SCANNER FOR GITHUB REPOS ::</div>
     <div class="version-line">[ scan your own repos before someone else does ]<span class="cursor"></span></div>
+  </div>
+
+  <!-- DISCLAIMER BOX -->
+  <div class="disclaimer-box">
+    <span class="disc-title">⚠ DISCLAIMER</span>
+    <ul>
+      <li>This tool is intended for scanning <strong>your own repositories only.</strong></li>
+      <li>Scanning repositories you do not own may violate <strong>GitHub's Terms of Service</strong> and local cybercrime laws.</li>
+      <li>LeakGuard runs entirely in your browser. <strong>No data is collected, stored, or transmitted.</strong></li>
+      <li>This tool only reads <strong>publicly accessible files</strong> via GitHub's official API.</li>
+      <li>The author assumes <strong>no liability</strong> for misuse of this tool.</li>
+    </ul>
+  </div>
+
+  <!-- RATE LIMIT WARNING -->
+  <div class="rate-warn" id="rateWarn">
+    GitHub's free API allows 60 requests/hour for unauthenticated users. Scan results may be incomplete. Wait 1 hour and try again, or reduce repo size.
   </div>
 
   <!-- TERMINAL INPUT -->
@@ -504,11 +389,11 @@
         <div class="term-dot y"></div>
         <div class="term-dot g"></div>
       </div>
-      <div class="term-title">leakguard@parksoju: ~/scanner</div>
+      <div class="term-title">leakguard@kali: ~/scanner</div>
     </div>
     <div class="term-body">
 
-      <div style="font-size:12px; color: var(--muted); margin-bottom:14px; line-height:1.8;">
+      <div class="term-init">
         <span style="color:var(--cyan)">[*]</span> LeakGuard v1.0.0 initialized<br/>
         <span style="color:var(--cyan)">[*]</span> Patterns loaded: <span style="color:var(--green)">20 secret types</span><br/>
         <span style="color:var(--cyan)">[*]</span> Mode: <span style="color:var(--green)">PUBLIC REPO SCAN</span><br/>
@@ -531,9 +416,7 @@
 
       <button class="btn-scan" id="scanBtn" onclick="startScan()">[ EXECUTE SCAN ]</button>
 
-      <div class="term-hint">Disclaimer: This tool only scans public repositories. 
-                            Scan your own repos only. Unauthorized scanning may 
-                            violate GitHub ToS and local laws.</div>
+      <div class="term-hint">Disclaimer: This tool only scans public repositories. Scan your own repos only. Unauthorized scanning may violate GitHub ToS and local laws.</div>
 
       <!-- PROGRESS -->
       <div id="progress">
@@ -554,82 +437,112 @@
 </main>
 
 <footer>
-  LEAKGUARD &nbsp;::&nbsp; OPEN SOURCE &nbsp;::&nbsp; NO DATA STORED &nbsp;::&nbsp; SCAN YOUR OWN REPOS ONLY
+  LEAKGUARD &nbsp;::&nbsp; OPEN SOURCE &nbsp;::&nbsp; NO DATA STORED &nbsp;::&nbsp; SCAN YOUR OWN REPOS ONLY &nbsp;::&nbsp; BY @ParkSoju-ai
 </footer>
 
 <script>
-// ─── SECRET PATTERNS ──────────────────────────────────────────────────────────
+// ─── SECRET PATTERNS ─────────────────────────────────────────────────────────
 const PATTERNS = [
-  { name: "OpenAI API Key",         regex: /sk-[a-zA-Z0-9]{32,}/g,                           severity: "danger",  fix: "Move to environment variable: process.env.OPENAI_API_KEY. Add to .gitignore." },
-  { name: "OpenAI Project Key",     regex: /sk-proj-[a-zA-Z0-9\-_]{32,}/g,                   severity: "danger",  fix: "Rotate this key immediately at platform.openai.com. Use .env file." },
-  { name: "Anthropic API Key",      regex: /sk-ant-[a-zA-Z0-9\-_]{32,}/g,                    severity: "danger",  fix: "Rotate at console.anthropic.com. Never hardcode API keys." },
-  { name: "AWS Access Key",         regex: /AKIA[0-9A-Z]{16}/g,                               severity: "danger",  fix: "Revoke immediately at AWS IAM console. Use IAM roles or .env." },
-  { name: "Google API Key",         regex: /AIza[0-9A-Za-z\-_]{35}/g,                        severity: "danger",  fix: "Restrict/rotate at console.cloud.google.com. Store in .env." },
-  { name: "Firebase Config",        regex: /apiKey:\s*['"][A-Za-z0-9\-_]{30,}['"]/g,         severity: "warning", fix: "Firebase web keys should be restricted by domain in Firebase Console." },
-  { name: "GitHub Token",           regex: /gh[pousr]_[A-Za-z0-9_]{36,}/g,                   severity: "danger",  fix: "Revoke at github.com/settings/tokens. Use GitHub Secrets for CI/CD." },
-  { name: "Stripe Secret Key",      regex: /sk_live_[0-9a-zA-Z]{24,}/g,                      severity: "danger",  fix: "Rotate at dashboard.stripe.com. Never use live keys in frontend." },
-  { name: "Stripe Test Key",        regex: /sk_test_[0-9a-zA-Z]{24,}/g,                      severity: "warning", fix: "Test key exposed. Move to .env file." },
+  { name: "OpenAI API Key",         regex: /sk-[a-zA-Z0-9]{32,}/g,                                        severity: "danger",  fix: "Move to environment variable: process.env.OPENAI_API_KEY. Add to .gitignore." },
+  { name: "OpenAI Project Key",     regex: /sk-proj-[a-zA-Z0-9\-_]{32,}/g,                                severity: "danger",  fix: "Rotate this key immediately at platform.openai.com. Use .env file." },
+  { name: "Anthropic API Key",      regex: /sk-ant-[a-zA-Z0-9\-_]{32,}/g,                                 severity: "danger",  fix: "Rotate at console.anthropic.com. Never hardcode API keys." },
+  { name: "AWS Access Key",         regex: /AKIA[0-9A-Z]{16}/g,                                            severity: "danger",  fix: "Revoke immediately at AWS IAM console. Use IAM roles or .env." },
+  { name: "Google API Key",         regex: /AIza[0-9A-Za-z\-_]{35}/g,                                     severity: "danger",  fix: "Restrict/rotate at console.cloud.google.com. Store in .env." },
+  { name: "Firebase Config",        regex: /apiKey:\s*['"][A-Za-z0-9\-_]{30,}['"]/g,                      severity: "warning", fix: "Firebase web keys should be restricted by domain in Firebase Console." },
+  { name: "GitHub Token",           regex: /gh[pousr]_[A-Za-z0-9_]{36,}/g,                                severity: "danger",  fix: "Revoke at github.com/settings/tokens. Use GitHub Secrets for CI/CD." },
+  { name: "Stripe Secret Key",      regex: /sk_live_[0-9a-zA-Z]{24,}/g,                                   severity: "danger",  fix: "Rotate at dashboard.stripe.com. Never use live keys in frontend." },
+  { name: "Stripe Test Key",        regex: /sk_test_[0-9a-zA-Z]{24,}/g,                                   severity: "warning", fix: "Test key exposed. Move to .env file." },
   { name: "Shopee/Lazada Token",    regex: /(?:shopee|lazada)[_\-]?(?:secret|token|key)\s*[:=]\s*['"][^\s'"]{8,}['"]/gi, severity: "danger", fix: "Rotate affiliate credentials. Use environment variables." },
-  { name: "Hardcoded Password",     regex: /(?:password|passwd|pwd)\s*[:=]\s*['"][^'"]{6,}['"]/gi, severity: "danger", fix: "Never hardcode passwords. Use environment variables." },
+  { name: "Hardcoded Password",     regex: /(?:password|passwd|pwd)\s*[:=]\s*['"][^'"]{6,}['"]/gi,        severity: "danger",  fix: "Never hardcode passwords. Use environment variables." },
   { name: "Database Connection",    regex: /(?:mongodb|mysql|postgres|postgresql):\/\/[^\s'"<>]+:[^\s'"<>@]+@/gi, severity: "danger", fix: "Move DB connection strings to .env. Never commit credentials." },
   { name: "JWT Secret",             regex: /(?:jwt|JWT)[_\-]?(?:secret|key)\s*[:=]\s*['"][^\s'"]{8,}['"]/gi, severity: "danger", fix: "Rotate JWT secret. Use a random 256-bit value from env variable." },
-  { name: "Private Key Block",      regex: /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/g,      severity: "danger",  fix: "NEVER commit private keys. Revoke and regenerate. Add *.pem to .gitignore." },
-  { name: "Telegram Bot Token",     regex: /[0-9]{8,10}:[a-zA-Z0-9_\-]{35}/g,               severity: "danger",  fix: "Revoke via @BotFather on Telegram. Store token in .env." },
-  { name: "Slack Token",            regex: /xox[baprs]-[0-9A-Za-z\-]{10,}/g,                severity: "danger",  fix: "Revoke at api.slack.com/apps. Use environment variables." },
-  { name: "Cloudflare API Token",   regex: /(?:CF_API_TOKEN|cloudflare)[^\n]*[a-zA-Z0-9_\-]{37}/gi, severity: "danger", fix: "Rotate at dash.cloudflare.com/profile/api-tokens." },
-  { name: ".env File Committed",    regex: /^\.env$/m,                                        severity: "warning", fix: "Add .env to your .gitignore file immediately." },
-  { name: "Slack Webhook",          regex: /https:\/\/hooks\.slack\.com\/services\/[A-Z0-9\/]+/g, severity: "danger", fix: "Revoke at api.slack.com. Webhooks are secrets too." },
+  { name: "Private Key Block",      regex: /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/g,                   severity: "danger",  fix: "NEVER commit private keys. Revoke and regenerate. Add *.pem to .gitignore." },
+  { name: "Telegram Bot Token",     regex: /[0-9]{8,10}:[a-zA-Z0-9_\-]{35}/g,                            severity: "danger",  fix: "Revoke via @BotFather on Telegram. Store token in .env." },
+  { name: "Slack Token",            regex: /xox[baprs]-[0-9A-Za-z\-]{10,}/g,                             severity: "danger",  fix: "Revoke at api.slack.com/apps. Use environment variables." },
+  { name: "Cloudflare API Token",   regex: /(?:CF_API_TOKEN|cloudflare)[^\n]*[a-zA-Z0-9_\-]{37}/gi,      severity: "danger",  fix: "Rotate at dash.cloudflare.com/profile/api-tokens." },
+  { name: ".env File Committed",    regex: /^\.env$/m,                                                     severity: "warning", fix: "Add .env to your .gitignore file immediately." },
+  { name: "Slack Webhook",          regex: /https:\/\/hooks\.slack\.com\/services\/[A-Z0-9\/]+/g,         severity: "danger",  fix: "Revoke at api.slack.com. Webhooks are secrets too." },
   { name: "Generic Secret",         regex: /(?:secret|api_key|apikey|access_token)\s*[:=]\s*['"][^\s'"]{10,}['"]/gi, severity: "warning", fix: "Potential secret detected. Move to environment variable." },
 ];
 
 const SKIP_EXT = ['.png','.jpg','.jpeg','.gif','.svg','.ico','.woff','.woff2','.ttf','.eot','.mp4','.zip','.pdf','.lock'];
-const PRIORITY = ['.env','.env.local','config.js','config.ts','secrets.js','.npmrc','.pypirc'];
+const PRIORITY  = ['.env','.env.local','config.js','config.ts','secrets.js','.npmrc','.pypirc'];
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#x27;');
+}
 
 function parseRepo(url) {
-  const m = url.trim().match(/github\.com\/([^\/]+)\/([^\/\?#]+)/);
+  const m = url.trim().match(/github\.com\/([^\/\s]+)\/([^\/\s\?#]+)/);
   if (!m) return null;
   return { owner: m[1], repo: m[2].replace(/\.git$/,'') };
 }
 
 async function fetchTree(owner, repo) {
-  const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/HEAD?recursive=1`);
-  if (!r.ok) throw new Error(`Repo not found or private (HTTP ${r.status})`);
+  const r = await fetch(`https://api.github.com/repos/${esc(owner)}/${esc(repo)}/git/trees/HEAD?recursive=1`);
+  // Check for rate limit
+  if (r.status === 403 || r.status === 429) {
+    document.getElementById('rateWarn').style.display = 'block';
+    throw new Error('GitHub API rate limit reached (60 req/hour). Please wait and try again.');
+  }
+  if (!r.ok) throw new Error(`Repo not found or private (HTTP ${r.status}). Make sure the repo is public.`);
   const d = await r.json();
   return d.tree.filter(f => f.type === 'blob' && f.size < 500000);
 }
 
 async function fetchFile(owner, repo, path) {
   const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`);
+  if (r.status === 403 || r.status === 429) {
+    document.getElementById('rateWarn').style.display = 'block';
+    return null; // silently skip but show warning
+  }
   if (!r.ok) return null;
   const d = await r.json();
   if (!d.content) return null;
-  return atob(d.content.replace(/\n/g,''));
+  try { return atob(d.content.replace(/\n/g,'')); }
+  catch { return null; }
 }
 
 function shouldSkip(p) { return SKIP_EXT.some(e => p.toLowerCase().endsWith(e)); }
 
+// FIX: count per pattern per file, not globally
 function scanContent(content, filePath) {
   const findings = [];
   for (const pat of PATTERNS) {
     const rx = new RegExp(pat.regex.source, pat.regex.flags);
     let m;
-    while ((m = rx.exec(content)) !== null) {
+    let patCount = 0;
+    while ((m = rx.exec(content)) !== null && patCount < 3) {
       const line = content.substring(0, m.index).split('\n').length;
-      const lineText = content.split('\n')[line-1] || '';
-      findings.push({ pattern: pat.name, severity: pat.severity, file: filePath, line, snippet: lineText.trim().substring(0,120), fix: pat.fix });
-      if (findings.length > 3) break;
+      const lineText = content.split('\n')[line - 1] || '';
+      findings.push({
+        pattern:  pat.name,
+        severity: pat.severity,
+        file:     filePath,
+        line,
+        snippet:  lineText.trim().substring(0, 120),
+        fix:      pat.fix,
+      });
+      patCount++;
     }
   }
   return findings;
 }
 
-const log = document.getElementById('output-log');
-function addLog(msg, cls='') {
+// ─── LOGGING ─────────────────────────────────────────────────────────────────
+const logEl = document.getElementById('output-log');
+function addLog(msg, cls = '') {
   const s = document.createElement('span');
   s.className = 'log-line ' + cls;
   s.textContent = msg;
-  log.appendChild(s);
-  log.scrollTop = log.scrollHeight;
+  logEl.appendChild(s);
+  logEl.scrollTop = logEl.scrollHeight;
 }
 
 function setProgress(pct, label) {
@@ -637,10 +550,12 @@ function setProgress(pct, label) {
   document.getElementById('progLabel').textContent = label;
 }
 
-function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-function renderResults(findings, filesScanned, repoName) {
+// ─── RENDER RESULTS ───────────────────────────────────────────────────────────
+function renderResults(findings, filesScanned, owner, repo) {
+  // FIX: use pre-escaped owner/repo for display, never inject raw
+  const repoDisplay = esc(owner) + '/' + esc(repo);
   const container = document.getElementById('results');
+
   if (findings.length === 0) {
     container.innerHTML = `
       <div class="clean-state">
@@ -652,36 +567,40 @@ function renderResults(findings, filesScanned, repoName) {
  ╚██████╔╝╚██████╗
   ╚═════╝  ╚═════╝</pre>
         <div class="clean-msg">[ NO SECRETS FOUND ]</div>
-        <div class="clean-sub">scanned ${filesScanned} files in ${repoName} &nbsp;::&nbsp; target looks clean<br/>always use .env files and .gitignore as best practice</div>
+        <div class="clean-sub">
+          scanned ${filesScanned} files in ${repoDisplay} &nbsp;::&nbsp; target looks clean<br/>
+          always use .env files and .gitignore as best practice
+        </div>
       </div>`;
     return;
   }
 
-  const dangers = findings.filter(f => f.severity==='danger').length;
-  const warnings = findings.filter(f => f.severity==='warning').length;
+  const dangers  = findings.filter(f => f.severity === 'danger').length;
+  const warnings = findings.filter(f => f.severity === 'warning').length;
 
   let html = `
     <div class="summary-header">
-      <div class="s-title">SCAN COMPLETE :: ${repoName}</div>
+      <div class="s-title">SCAN COMPLETE :: ${repoDisplay}</div>
       <div class="stat-row">
-        ${dangers ? `<div class="stat danger"><span class="val">${dangers}</span>CRITICAL</div>` : ''}
-        ${warnings ? `<div class="stat warn"><span class="val">${warnings}</span>WARNING</div>` : ''}
+        ${dangers  ? `<div class="stat danger"><span class="val">${dangers}</span>CRITICAL</div>` : ''}
+        ${warnings ? `<div class="stat warn"><span class="val">${warnings}</span>WARNING</div>`   : ''}
         <div class="stat ok"><span class="val">${filesScanned}</span>FILES SCANNED</div>
       </div>
     </div>`;
 
-  const sorted = [...findings].sort((a,b) => a.severity==='danger' ? -1 : 1);
-  sorted.forEach((f,i) => {
+  const sorted = [...findings].sort((a, b) => a.severity === 'danger' ? -1 : 1);
+
+  sorted.forEach((f, i) => {
     html += `
-    <div class="finding ${f.severity}" id="f${i}">
+    <div class="finding ${esc(f.severity)}" id="f${i}">
       <div class="finding-header" onclick="toggle(${i})">
-        <span class="sev-tag">${f.severity==='danger'?'CRITICAL':'WARNING'}</span>
+        <span class="sev-tag">${f.severity === 'danger' ? 'CRITICAL' : 'WARNING'}</span>
         <span class="finding-name">${esc(f.pattern)}</span>
         <span class="finding-file">${esc(f.file)}</span>
         <span class="finding-chevron">▶</span>
       </div>
       <div class="finding-body">
-        <div class="code-block" data-file="${esc(f.file)}" data-line="${f.line}">${esc(f.snippet)}</div>
+        <div class="code-block" data-file="${esc(f.file)}" data-line="${esc(String(f.line))}">${esc(f.snippet)}</div>
         <div class="fix-block">${esc(f.fix)}</div>
       </div>
     </div>`;
@@ -690,26 +609,33 @@ function renderResults(findings, filesScanned, repoName) {
   container.innerHTML = html;
 }
 
-function toggle(i) { document.getElementById('f'+i).classList.toggle('open'); }
+function toggle(i) { document.getElementById('f' + i).classList.toggle('open'); }
 
+// ─── MAIN SCAN ────────────────────────────────────────────────────────────────
 async function startScan() {
-  const input = document.getElementById('repoInput').value.trim();
-  const btn = document.getElementById('scanBtn');
+  const input   = document.getElementById('repoInput').value.trim();
+  const btn     = document.getElementById('scanBtn');
   const results = document.getElementById('results');
-  const prog = document.getElementById('progress');
+  const prog    = document.getElementById('progress');
 
-  if (!input) { addLog('[!] No target specified. Enter a GitHub repo URL.', 'warn'); return; }
+  // Reset rate limit warning
+  document.getElementById('rateWarn').style.display = 'none';
+
+  if (!input) {
+    addLog('[!] No target specified. Enter a GitHub repo URL.', 'warn');
+    return;
+  }
 
   const parsed = parseRepo(input);
   if (!parsed) {
-    results.innerHTML = '<div class="err-block">Invalid GitHub URL. Use: https://github.com/username/repo</div>';
+    results.innerHTML = '<div class="err-block">Invalid GitHub URL. Use format: https://github.com/username/repo</div>';
     return;
   }
 
   btn.disabled = true;
   btn.textContent = '[ SCANNING... ]';
   results.innerHTML = '';
-  log.innerHTML = '';
+  logEl.innerHTML = '';
   prog.style.display = 'block';
 
   try {
@@ -717,21 +643,23 @@ async function startScan() {
     addLog(`[*] Connecting to GitHub API...`, 'info');
     setProgress(5, '[*] Fetching file tree...');
 
-    const tree = await fetchTree(parsed.owner, parsed.repo);
+    const tree     = await fetchTree(parsed.owner, parsed.repo);
     const scannable = tree.filter(f => !shouldSkip(f.path));
-    const priority = scannable.filter(f => PRIORITY.some(p => f.path.endsWith(p)));
-    const rest = scannable.filter(f => !PRIORITY.some(p => f.path.endsWith(p)));
-    const ordered = [...priority, ...rest].slice(0, 80);
+    const priority  = scannable.filter(f => PRIORITY.some(p => f.path.endsWith(p)));
+    const rest      = scannable.filter(f => !PRIORITY.some(p => f.path.endsWith(p)));
+    const ordered   = [...priority, ...rest].slice(0, 80);
 
     addLog(`[+] File tree loaded. ${ordered.length} files queued.`, 'ok');
-    if (priority.length) addLog(`[!] Priority targets found: ${priority.map(f=>f.path).join(', ')}`, 'warn');
+    if (priority.length) addLog(`[!] Priority targets: ${priority.map(f => f.path).join(', ')}`, 'warn');
+    if (ordered.length >= 80) addLog(`[!] Large repo — capped at 80 files. Consider scanning locally.`, 'warn');
 
     const allFindings = [];
     let done = 0;
 
     for (const file of ordered) {
-      setProgress(10 + Math.round((done/ordered.length)*85), `[*] Scanning: ${file.path}`);
+      setProgress(10 + Math.round((done / ordered.length) * 85), `[*] Scanning: ${file.path}`);
       if (done % 5 === 0) addLog(`[~] ${file.path}`, '');
+
       const content = await fetchFile(parsed.owner, parsed.repo, file.path);
       if (content) {
         const hits = scanContent(content, file.path);
@@ -745,11 +673,11 @@ async function startScan() {
     }
 
     setProgress(100, '[+] Scan complete.');
-    addLog(`[+] Scan finished. ${allFindings.length} issue(s) detected.`, allFindings.length ? 'warn' : 'ok');
+    addLog(`[+] Done. ${allFindings.length} issue(s) found across ${done} files.`, allFindings.length ? 'warn' : 'ok');
     setTimeout(() => { prog.style.display = 'none'; }, 1500);
-    renderResults(allFindings, ordered.length, `${parsed.owner}/${parsed.repo}`);
+    renderResults(allFindings, ordered.length, parsed.owner, parsed.repo);
 
-  } catch(err) {
+  } catch (err) {
     prog.style.display = 'none';
     results.innerHTML = `<div class="err-block">${esc(err.message)}</div>`;
     addLog(`[-] ${err.message}`, 'err');

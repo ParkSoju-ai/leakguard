@@ -31,6 +31,7 @@ LeakGuard is a free, open-source browser tool that scans public GitHub repositor
 | Stripe Live Keys | 🔴 Critical |
 | Telegram Bot Tokens | 🔴 Critical |
 | Slack Tokens | 🔴 Critical |
+| Slack Webhooks | 🔴 Critical |
 | Hardcoded Passwords | 🔴 Critical |
 | Database Connection Strings | 🔴 Critical |
 | Private Key Blocks (RSA/EC) | 🔴 Critical |
@@ -53,6 +54,7 @@ LeakGuard is a free, open-source browser tool that scans public GitHub repositor
 - ✅ **Tells you how to fix** every finding
 - ✅ **Scans up to 80 files** per repo via GitHub's free public API
 - ✅ **Prioritizes sensitive files** like `.env`, `config.js`, `secrets.js`
+- ⚠️ **GitHub API limit** — unauthenticated scans are limited to 60 requests/hour. For large repos, wait 1 hour between scans.
 
 ---
 
@@ -60,7 +62,7 @@ LeakGuard is a free, open-source browser tool that scans public GitHub repositor
 
 1. Go to **[ParkSoju-ai.github.io/leakguard](https://ParkSoju-ai.github.io/leakguard)**
 2. Paste your GitHub repo URL (e.g. `https://github.com/yourname/yourrepo`)
-3. Click **Scan Repo →**
+3. Click **[ EXECUTE SCAN ]**
 4. Review findings and follow the fix instructions
 
 That's it — no install, no sign up, no tracking.

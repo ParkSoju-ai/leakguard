@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LeakGuard — Scan Your Repo for Exposed Secrets</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --border: #1e2330;
+    --accent: #00ff88;
+    --accent-dim: rgba(0,255,136,0.08);
+    --accent-glow: rgba(0,255,136,0.25);
+    --red: #ff4d6a;
+    --red-dim: rgba(255,77,106,0.1);
+    --yellow: #ffd166;
+    --yellow-dim: rgba(255,209,102,0.1);
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  header {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+
+  .logo span { color: var(--text); }
+
+  .badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid var(--accent-glow);
+    padding: 2px 8px;
+    border-radius: 99px;
+    letter-spacing: 1px;
+  }
+
+  /* HERO */
+  .hero {
+    padding: 64px 32px 40px;
+    max-width: 720px;
+    margin: 0 auto;
+    width: 100%;
+    text-align: center;
+  }
+
+  .hero h1 {
+    font-family: var(--mono);
+    font-size: clamp(28px, 5vw, 42px);
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+
+  .hero h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .hero p {
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.7;
+    margin-bottom: 40px;
+  }
+
+  /* SCAN BOX */
+  .scan-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 12px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .input-row input {
+    flex: 1;
+    min-width: 200px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .input-row input:focus {
+    border-color: var(--accent);
+  }
+
+  .input-row input::placeholder { color: var(--muted); }
+
+  .btn-scan {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: opacity 0.2s, box-shadow 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-scan:hover { opacity: 0.85; box-shadow: 0 0 16px var(--accent-glow); }
+  .btn-scan:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 10px;
+    font-family: var(--mono);
+  }
+
+  /* PROGRESS */
+  #progress {
+    display: none;
+    max-width: 720px;
+    margin: 0 auto 16px;
+    width: 100%;
+    padding: 0 32px;
+  }
+
+  .progress-bar-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    height: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.3s ease;
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  .progress-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* RESULTS */
+  #results {
+    max-width: 720px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 0 32px 64px;
+  }
+
+  .summary-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .summary-chip {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 99px;
+    border: 1px solid;
+  }
+
+  .chip-danger { background: var(--red-dim); color: var(--red); border-color: var(--red); }
+  .chip-warn { background: var(--yellow-dim); color: var(--yellow); border-color: var(--yellow); }
+  .chip-ok { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+
+  .finding {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+
+  .finding.danger { border-left: 3px solid var(--red); }
+  .finding.warning { border-left: 3px solid var(--yellow); }
+
+  .finding-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 18px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .finding-header:hover { background: rgba(255,255,255,0.02); }
+
+  .sev-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .danger .sev-dot { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .warning .sev-dot { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+
+  .finding-title {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    flex: 1;
+  }
+
+  .finding-file {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .chevron {
+    color: var(--muted);
+    font-size: 12px;
+    transition: transform 0.2s;
+  }
+
+  .finding.open .chevron { transform: rotate(90deg); }
+
+  .finding-body {
+    display: none;
+    padding: 0 18px 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .finding.open .finding-body { display: block; }
+
+  .code-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--red);
+    overflow-x: auto;
+    margin: 12px 0 10px;
+    word-break: break-all;
+  }
+
+  .fix-box {
+    background: var(--accent-dim);
+    border: 1px solid var(--accent-glow);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--accent);
+    line-height: 1.6;
+  }
+
+  .fix-box strong { display: block; margin-bottom: 4px; font-family: var(--mono); }
+
+  .empty-state {
+    text-align: center;
+    padding: 48px 0;
+  }
+
+  .empty-icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-state h3 { font-family: var(--mono); color: var(--accent); margin-bottom: 8px; }
+  .empty-state p { color: var(--muted); font-size: 14px; }
+
+  .error-box {
+    background: var(--red-dim);
+    border: 1px solid var(--red);
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--red);
+  }
+
+  /* FILES SCANNED */
+  .files-scanned {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  footer {
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+    padding: 20px 32px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Leak<span>Guard</span></div>
+  <div class="badge">BETA</div>
+</header>
+
+<div class="hero">
+  <h1>Scan your repo before<br/><em>someone else does.</em></h1>
+  <p>Paste your public GitHub repo URL and LeakGuard will scan every file for exposed API keys, passwords, tokens, and secrets — then show you exactly how to fix them.</p>
+
+  <div class="scan-box">
+    <div class="input-row">
+      <input type="text" id="repoInput" placeholder="https://github.com/username/repo" />
+      <button class="btn-scan" id="scanBtn" onclick="startScan()">Scan Repo →</button>
+    </div>
+    <div class="hint">Only scans public repositories. Your own repos only — be responsible.</div>
+  </div>
+</div>
+
+<div id="progress">
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progressFill"></div>
+  </div>
+  <div class="progress-label" id="progressLabel">Initializing...</div>
+</div>
+
+<div id="results"></div>
+
+<footer>LeakGuard — scan your own repos only &nbsp;·&nbsp; open source &nbsp;·&nbsp; no data stored</footer>
+
+<script>
+// ─── SECRET PATTERNS ──────────────────────────────────────────────────────────
+const PATTERNS = [
+  { name: "OpenAI API Key",         regex: /sk-[a-zA-Z0-9]{32,}/g,                          severity: "danger",  fix: "Move to environment variable: process.env.OPENAI_API_KEY. Add to .gitignore." },
+  { name: "OpenAI Project Key",     regex: /sk-proj-[a-zA-Z0-9\-_]{32,}/g,                  severity: "danger",  fix: "Rotate this key immediately at platform.openai.com. Use .env file." },
+  { name: "Anthropic API Key",      regex: /sk-ant-[a-zA-Z0-9\-_]{32,}/g,                   severity: "danger",  fix: "Rotate at console.anthropic.com. Never hardcode API keys." },
+  { name: "AWS Access Key",         regex: /AKIA[0-9A-Z]{16}/g,                              severity: "danger",  fix: "Revoke immediately at AWS IAM console. Use IAM roles or .env." },
+  { name: "AWS Secret Key",         regex: /(?:aws_secret|AWS_SECRET)[^\n]*['\"][0-9a-zA-Z\/+=]{40}['\"]/, severity: "danger", fix: "Revoke in AWS IAM. Use environment variables or AWS Secrets Manager." },
+  { name: "Google API Key",         regex: /AIza[0-9A-Za-z\-_]{35}/g,                       severity: "danger",  fix: "Restrict/rotate at console.cloud.google.com. Store in .env." },
+  { name: "Firebase Config",        regex: /apiKey:\s*['"][A-Za-z0-9\-_]{30,}['"]/g,        severity: "warning", fix: "Firebase web keys are semi-public but should be restricted by domain in Firebase Console." },
+  { name: "GitHub Token",           regex: /gh[pousr]_[A-Za-z0-9_]{36,}/g,                  severity: "danger",  fix: "Revoke at github.com/settings/tokens. Use GitHub Secrets for CI/CD." },
+  { name: "Stripe Secret Key",      regex: /sk_live_[0-9a-zA-Z]{24,}/g,                     severity: "danger",  fix: "Rotate at dashboard.stripe.com. Never use live keys in frontend code." },
+  { name: "Stripe Test Key",        regex: /sk_test_[0-9a-zA-Z]{24,}/g,                     severity: "warning", fix: "Test key exposed — still bad practice. Move to .env." },
+  { name: "Shopee/Lazada Token",    regex: /(?:shopee|lazada)[_\-]?(?:secret|token|key)\s*[:=]\s*['"][^\s'"]{8,}['"]/gi, severity: "danger", fix: "Rotate affiliate credentials. Use environment variables." },
+  { name: "Hardcoded Password",     regex: /(?:password|passwd|pwd)\s*[:=]\s*['"][^'"]{6,}['"]/gi, severity: "danger", fix: "Never hardcode passwords. Use environment variables or a secrets manager." },
+  { name: "Database Connection String", regex: /(?:mongodb|mysql|postgres|postgresql):\/\/[^\s'"<>]+:[^\s'"<>@]+@/gi, severity: "danger", fix: "Move DB connection strings to .env. Never commit credentials." },
+  { name: "JWT Secret",             regex: /(?:jwt|JWT)[_\-]?(?:secret|key)\s*[:=]\s*['"][^\s'"]{8,}['"]/gi, severity: "danger", fix: "Rotate JWT secret. Use a random 256-bit value from an env variable." },
+  { name: "Private Key Block",      regex: /-----BEGIN (?:RSA |EC )?PRIVATE KEY-----/g,     severity: "danger",  fix: "NEVER commit private keys. Revoke and regenerate. Add *.pem to .gitignore." },
+  { name: ".env File Committed",    regex: /^\.env$/m,                                       severity: "warning", fix: "Add .env to your .gitignore file immediately." },
+  { name: "Telegram Bot Token",     regex: /[0-9]{8,10}:[a-zA-Z0-9_\-]{35}/g,              severity: "danger",  fix: "Revoke via @BotFather on Telegram. Store token in .env." },
+  { name: "Slack Token",            regex: /xox[baprs]-[0-9A-Za-z\-]{10,}/g,               severity: "danger",  fix: "Revoke at api.slack.com/apps. Use environment variables." },
+  { name: "Cloudflare API Token",   regex: /(?:CF_API_TOKEN|cloudflare)[^\n]*[a-zA-Z0-9_\-]{37}/gi, severity: "danger", fix: "Rotate at dash.cloudflare.com/profile/api-tokens." },
+  { name: "Generic Secret",         regex: /(?:secret|api_key|apikey|access_token)\s*[:=]\s*['"][^\s'"]{10,}['"]/gi, severity: "warning", fix: "Potential secret detected. Move to environment variable." },
+];
+
+// ─── GITHUB API ───────────────────────────────────────────────────────────────
+function parseRepoUrl(url) {
+  const match = url.trim().match(/github\.com\/([^\/]+)\/([^\/\?#]+)/);
+  if (!match) return null;
+  return { owner: match[1], repo: match[2].replace(/\.git$/, '') };
+}
+
+async function fetchTree(owner, repo) {
+  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/HEAD?recursive=1`);
+  if (!res.ok) throw new Error(`Repo not found or private (${res.status})`);
+  const data = await res.json();
+  return data.tree.filter(f => f.type === 'blob' && f.size < 500000); // skip huge files
+}
+
+async function fetchFile(owner, repo, path) {
+  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  if (!data.content) return null;
+  return atob(data.content.replace(/\n/g, ''));
+}
+
+// ─── SCAN ─────────────────────────────────────────────────────────────────────
+const SKIP_EXT = ['.png','.jpg','.jpeg','.gif','.svg','.ico','.woff','.woff2','.ttf','.eot','.mp4','.zip','.pdf','.lock'];
+const PRIORITY_FILES = ['.env', '.env.local', 'config.js', 'config.ts', 'secrets.js', '.npmrc', '.pypirc'];
+
+function shouldSkip(path) {
+  return SKIP_EXT.some(ext => path.toLowerCase().endsWith(ext));
+}
+
+function scanContent(content, filePath) {
+  const findings = [];
+  for (const pattern of PATTERNS) {
+    const regex = new RegExp(pattern.regex.source, pattern.regex.flags);
+    let match;
+    while ((match = regex.exec(content)) !== null) {
+      const lineNum = content.substring(0, match.index).split('\n').length;
+      const lineContent = content.split('\n')[lineNum - 1] || '';
+      findings.push({
+        pattern: pattern.name,
+        severity: pattern.severity,
+        file: filePath,
+        line: lineNum,
+        snippet: lineContent.trim().substring(0, 120),
+        fix: pattern.fix,
+      });
+      if (findings.length > 3) break; // cap per pattern per file
+    }
+  }
+  return findings;
+}
+
+// ─── UI ───────────────────────────────────────────────────────────────────────
+function setProgress(pct, label) {
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = label;
+}
+
+function showProgress(show) {
+  document.getElementById('progress').style.display = show ? 'block' : 'none';
+}
+
+function renderResults(allFindings, filesScanned, repoName) {
+  const container = document.getElementById('results');
+  if (allFindings.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🛡️</div>
+        <h3>No secrets found!</h3>
+        <p>Scanned ${filesScanned} files in ${repoName}.<br/>Looks clean — but always use .env files and .gitignore.</p>
+      </div>`;
+    return;
+  }
+
+  const dangers = allFindings.filter(f => f.severity === 'danger').length;
+  const warnings = allFindings.filter(f => f.severity === 'warning').length;
+
+  let html = `
+    <div class="files-scanned">Scanned ${filesScanned} files in ${repoName} — found ${allFindings.length} issue${allFindings.length !== 1 ? 's' : ''}</div>
+    <div class="summary-bar">
+      ${dangers ? `<div class="summary-chip chip-danger">🔴 ${dangers} Critical</div>` : ''}
+      ${warnings ? `<div class="summary-chip chip-warn">🟡 ${warnings} Warning</div>` : ''}
+      <div class="summary-chip chip-ok">✅ ${filesScanned} files scanned</div>
+    </div>
+  `;
+
+  // Sort: danger first
+  const sorted = [...allFindings].sort((a,b) => a.severity === 'danger' ? -1 : 1);
+
+  sorted.forEach((f, i) => {
+    html += `
+    <div class="finding ${f.severity}" id="finding-${i}">
+      <div class="finding-header" onclick="toggleFinding(${i})">
+        <div class="sev-dot"></div>
+        <div class="finding-title">${f.pattern}</div>
+        <div class="finding-file">${f.file}:${f.line}</div>
+        <div class="chevron">▶</div>
+      </div>
+      <div class="finding-body">
+        <div class="code-block">${escapeHtml(f.snippet)}</div>
+        <div class="fix-box">
+          <strong>🔧 How to fix:</strong>
+          ${f.fix}
+        </div>
+      </div>
+    </div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+function toggleFinding(i) {
+  document.getElementById(`finding-${i}`).classList.toggle('open');
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─── MAIN ─────────────────────────────────────────────────────────────────────
+async function startScan() {
+  const input = document.getElementById('repoInput').value.trim();
+  const btn = document.getElementById('scanBtn');
+  const results = document.getElementById('results');
+
+  if (!input) { alert('Please enter a GitHub repo URL.'); return; }
+
+  const parsed = parseRepoUrl(input);
+  if (!parsed) {
+    results.innerHTML = `<div class="error-box">❌ Invalid GitHub URL. Use format: https://github.com/username/repo</div>`;
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Scanning...';
+  results.innerHTML = '';
+  showProgress(true);
+  setProgress(5, 'Fetching repository file tree...');
+
+  try {
+    const tree = await fetchTree(parsed.owner, parsed.repo);
+    const scannable = tree.filter(f => !shouldSkip(f.path));
+
+    // Prioritize sensitive files
+    const priority = scannable.filter(f => PRIORITY_FILES.some(pf => f.path.endsWith(pf)));
+    const rest = scannable.filter(f => !PRIORITY_FILES.some(pf => f.path.endsWith(pf)));
+    const ordered = [...priority, ...rest].slice(0, 80); // cap at 80 files
+
+    const allFindings = [];
+    let done = 0;
+
+    for (const file of ordered) {
+      setProgress(10 + Math.round((done / ordered.length) * 85), `Scanning ${file.path}`);
+      const content = await fetchFile(parsed.owner, parsed.repo, file.path);
+      if (content) {
+        const findings = scanContent(content, file.path);
+        allFindings.push(...findings);
+      }
+      done++;
+      await new Promise(r => setTimeout(r, 50)); // small delay to avoid rate limit
+    }
+
+    setProgress(100, 'Done!');
+    setTimeout(() => showProgress(false), 800);
+    renderResults(allFindings, ordered.length, `${parsed.owner}/${parsed.repo}`);
+
+  } catch (err) {
+    showProgress(false);
+    results.innerHTML = `<div class="error-box">❌ ${err.message}</div>`;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Scan Repo →';
+}
+
+// Enter key support
+document.getElementById('repoInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') startScan();
+});
+</script>
+</body>
+</html>

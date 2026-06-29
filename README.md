@@ -16,8 +16,7 @@ LeakGuard is a free, open-source browser tool that scans public GitHub repositor
 
 ## 📸 Screenshot
 
-<!-- Add a screenshot of the tool here after deploying -->
-<!-- ![LeakGuard Screenshot](screenshot.png) -->
+![LeakGuard Screenshot](screenshot.png)
 
 ---
 

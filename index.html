@@ -241,6 +241,47 @@
   }
   .rate-warn::before { content: '[!] RATE LIMIT: '; color: var(--red); }
 
+  /* ── SCAN OPTIONS ── */
+  .options-panel {
+    border: 1px solid var(--muted);
+    background: rgba(0,255,65,0.02);
+    padding: 14px 18px;
+    margin-bottom: 12px;
+  }
+  .opt-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    flex-wrap: wrap;
+    padding: 6px 0;
+    cursor: pointer;
+  }
+  .opt-sub-row { cursor: default; padding-left: 26px; }
+  .opt-checkbox {
+    width: 15px; height: 15px; margin-top: 2px;
+    accent-color: var(--green);
+    cursor: pointer; flex-shrink: 0;
+  }
+  .opt-label {
+    font-size: 13px; color: var(--green); min-width: 190px;
+    letter-spacing: 0.5px;
+  }
+  .opt-sub {
+    font-size: 11px; color: var(--muted);
+    flex: 1; min-width: 220px;
+  }
+  .opt-select {
+    background: var(--black);
+    color: var(--green);
+    border: 1px solid var(--muted);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+  .token-input {
+    width: 100%; margin-top: 4px; margin-bottom: 4px;
+    border: 1px solid var(--muted) !important;
+    padding: 8px 10px !important;
+  }
+
   /* ── RESULTS ── */
   #results { margin-top: 8px; }
 
@@ -347,7 +388,7 @@
 <header>
   <div class="header-left">
     <div class="status-dot"></div>
-    <span>LEAKGUARD v1.0.0 :: ACTIVE</span>
+    <span>LEAKGUARD v1.1.0 :: ACTIVE</span>
   </div>
   <div class="header-right">root@leakguard:~# &nbsp;|&nbsp; PUBLIC REPO SCANNER</div>
 </header>
@@ -375,7 +416,9 @@
       <li>This tool is intended for scanning <strong>your own repositories only.</strong></li>
       <li>Scanning repositories you do not own may violate <strong>GitHub's Terms of Service</strong> and local cybercrime laws.</li>
       <li>LeakGuard runs entirely in your browser. <strong>No data is collected, stored, or transmitted.</strong></li>
-      <li>This tool only reads <strong>publicly accessible files</strong> via GitHub's official API.</li>
+      <li>This tool only reads <strong>publicly accessible files</strong> via GitHub's official API, or private repos you explicitly authorize with your own token.</li>
+      <li>If you provide a GitHub token, it is used <strong>only for API requests to github.com</strong>, kept in memory for this session, and never stored, logged, or sent anywhere else.</li>
+      <li>Git history scanning reads <strong>commit diffs</strong> you have access to — the same "your own repos only" rule applies.</li>
       <li>The author assumes <strong>no liability</strong> for misuse of this tool.</li>
     </ul>
   </div>
@@ -383,6 +426,37 @@
   <!-- RATE LIMIT WARNING -->
   <div class="rate-warn" id="rateWarn">
     GitHub's free API allows 60 requests/hour for unauthenticated users. Scan results may be incomplete. Wait 1 hour and try again, or reduce repo size.
+  </div>
+
+  <!-- SCAN OPTIONS -->
+  <div class="options-panel">
+    <label class="opt-row" for="historyToggle">
+      <input type="checkbox" id="historyToggle" class="opt-checkbox"/>
+      <span class="opt-label">Include Git History Scan</span>
+      <span class="opt-sub">finds secrets that were committed then deleted — still permanently in git history</span>
+    </label>
+
+    <div class="opt-row opt-sub-row" id="historyDepthRow" style="display:none;">
+      <span class="opt-label" style="min-width:auto;">Commits to check:</span>
+      <select id="historyDepth" class="opt-select">
+        <option value="20">Last 20 commits</option>
+        <option value="50" selected>Last 50 commits</option>
+        <option value="100">Last 100 commits</option>
+      </select>
+    </div>
+
+    <label class="opt-row" for="tokenInput">
+      <span class="opt-label">GitHub Token (optional)</span>
+      <span class="opt-sub">raises limit from 60&rarr;5,000 req/hr &middot; required for reliable history scans &middot; kept in memory only, never stored or sent anywhere but api.github.com</span>
+    </label>
+    <input
+      type="password"
+      id="tokenInput"
+      class="prompt-input token-input"
+      placeholder="ghp_xxxxxxxxxxxxxxxxxxxx (leave blank to scan unauthenticated)"
+      autocomplete="off"
+      spellcheck="false"
+    />
   </div>
 
   <!-- TERMINAL INPUT -->
@@ -398,9 +472,10 @@
     <div class="term-body">
 
       <div class="term-init">
-        <span style="color:var(--cyan)">[*]</span> LeakGuard v1.0.0 initialized<br/>
+        <span style="color:var(--cyan)">[*]</span> LeakGuard v1.1.0 initialized<br/>
         <span style="color:var(--cyan)">[*]</span> Patterns loaded: <span style="color:var(--green)">20 secret types</span><br/>
         <span style="color:var(--cyan)">[*]</span> Mode: <span style="color:var(--green)">PUBLIC REPO SCAN</span><br/>
+        <span style="color:var(--cyan)">[*]</span> NEW: <span style="color:var(--green)">Git History Scan</span> — finds secrets deleted from code but still in commit history<br/>
         <span style="color:var(--muted)">[#]</span> Enter target repository URL below
       </div>
 
@@ -493,20 +568,24 @@ function parseRepo(url) {
   return { owner: m[1], repo: m[2].replace(/\.git$/,'') };
 }
 
-async function fetchTree(owner, repo) {
-  const r = await fetch(`https://api.github.com/repos/${esc(owner)}/${esc(repo)}/git/trees/HEAD?recursive=1`);
+function authHeaders(token) {
+  return token ? { Authorization: `token ${token}` } : {};
+}
+
+async function fetchTree(owner, repo, token) {
+  const r = await fetch(`https://api.github.com/repos/${esc(owner)}/${esc(repo)}/git/trees/HEAD?recursive=1`, { headers: authHeaders(token) });
   // Check for rate limit
   if (r.status === 403 || r.status === 429) {
     document.getElementById('rateWarn').style.display = 'block';
-    throw new Error('GitHub API rate limit reached (60 req/hour). Please wait and try again.');
+    throw new Error('GitHub API rate limit reached. Add a token above to raise the limit, or wait and try again.');
   }
-  if (!r.ok) throw new Error(`Repo not found or private (HTTP ${r.status}). Make sure the repo is public.`);
+  if (!r.ok) throw new Error(`Repo not found or private (HTTP ${r.status}). Make sure the repo is public or your token has access.`);
   const d = await r.json();
   return d.tree.filter(f => f.type === 'blob' && f.size < 500000);
 }
 
-async function fetchFile(owner, repo, path) {
-  const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`);
+async function fetchFile(owner, repo, path, token) {
+  const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`, { headers: authHeaders(token) });
   if (r.status === 403 || r.status === 429) {
     document.getElementById('rateWarn').style.display = 'block';
     return null; // silently skip but show warning
@@ -516,6 +595,86 @@ async function fetchFile(owner, repo, path) {
   if (!d.content) return null;
   try { return atob(d.content.replace(/\n/g,'')); }
   catch { return null; }
+}
+
+// ─── GIT HISTORY SCAN ──────────────────────────────────────────────────────
+async function fetchCommitList(owner, repo, token, limit) {
+  const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=${limit}`, { headers: authHeaders(token) });
+  if (r.status === 403 || r.status === 429) {
+    document.getElementById('rateWarn').style.display = 'block';
+    throw new Error('GitHub API rate limit reached while listing commits. Add a token above to raise the limit.');
+  }
+  if (!r.ok) throw new Error(`Could not list commits (HTTP ${r.status}).`);
+  return r.json();
+}
+
+async function fetchCommitDiff(owner, repo, sha, token) {
+  const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/commits/${sha}`, { headers: authHeaders(token) });
+  if (r.status === 403 || r.status === 429) {
+    document.getElementById('rateWarn').style.display = 'block';
+    return null;
+  }
+  if (!r.ok) return null;
+  return r.json();
+}
+
+// Scan only ADDED lines (prefixed '+') in a commit's diff — this is the moment
+// a secret entered the repo, regardless of whether it was later deleted.
+function scanPatch(patch, filePath) {
+  if (!patch) return [];
+  const findings = [];
+  const lines = patch.split('\n');
+  let newLineNo = 0;
+  for (const raw of lines) {
+    const hunkMatch = raw.match(/^@@ -\d+(?:,\d+)? \+(\d+)/);
+    if (hunkMatch) { newLineNo = parseInt(hunkMatch[1], 10) - 1; continue; }
+    if (raw.startsWith('+') && !raw.startsWith('+++')) {
+      newLineNo++;
+      const lineContent = raw.slice(1);
+      for (const pat of PATTERNS) {
+        const rx = new RegExp(pat.regex.source, pat.regex.flags);
+        if (rx.test(lineContent)) {
+          findings.push({
+            pattern:  pat.name,
+            severity: pat.severity,
+            file:     filePath,
+            line:     newLineNo,
+            snippet:  lineContent.trim().substring(0, 120),
+            fix:      pat.fix,
+          });
+        }
+      }
+    } else if (!raw.startsWith('-')) {
+      newLineNo++;
+    }
+  }
+  return findings;
+}
+
+async function scanGitHistory(owner, repo, token, limit, onProgress) {
+  const commits = await fetchCommitList(owner, repo, token, limit);
+  const historyFindings = [];
+  let done = 0;
+  for (const c of commits) {
+    onProgress(done, commits.length, c.sha.substring(0, 7));
+    const detail = await fetchCommitDiff(owner, repo, c.sha, token);
+    if (detail && detail.files) {
+      for (const f of detail.files) {
+        if (!f.patch || shouldSkip(f.filename)) continue;
+        const hits = scanPatch(f.patch, f.filename);
+        hits.forEach(h => historyFindings.push({
+          ...h,
+          commitSha:  c.sha.substring(0, 7),
+          commitDate: c.commit?.author?.date || '',
+          commitMsg:  (c.commit?.message || '').split('\n')[0].substring(0, 80),
+          author:     c.commit?.author?.name || 'unknown',
+        }));
+      }
+    }
+    done++;
+    await new Promise(r => setTimeout(r, 40));
+  }
+  return historyFindings;
 }
 
 function shouldSkip(p) { return SKIP_EXT.some(e => p.toLowerCase().endsWith(e)); }
@@ -560,12 +719,13 @@ function setProgress(pct, label) {
 }
 
 // ─── RENDER RESULTS ───────────────────────────────────────────────────────────
-function renderResults(findings, filesScanned, owner, repo) {
+function renderResults(findings, historyFindings, filesScanned, owner, repo) {
   // FIX: use pre-escaped owner/repo for display, never inject raw
+  historyFindings = historyFindings || [];
   const repoDisplay = esc(owner) + '/' + esc(repo);
   const container = document.getElementById('results');
 
-  if (findings.length === 0) {
+  if (findings.length === 0 && historyFindings.length === 0) {
     container.innerHTML = `
       <div class="clean-state">
         <pre class="clean-ascii">
@@ -586,6 +746,7 @@ function renderResults(findings, filesScanned, owner, repo) {
 
   const dangers  = findings.filter(f => f.severity === 'danger').length;
   const warnings = findings.filter(f => f.severity === 'warning').length;
+  const histDangers = historyFindings.filter(f => f.severity === 'danger').length;
 
   let html = `
     <div class="summary-header">
@@ -593,39 +754,74 @@ function renderResults(findings, filesScanned, owner, repo) {
       <div class="stat-row">
         ${dangers  ? `<div class="stat danger"><span class="val">${dangers}</span>CRITICAL</div>` : ''}
         ${warnings ? `<div class="stat warn"><span class="val">${warnings}</span>WARNING</div>`   : ''}
+        ${historyFindings.length ? `<div class="stat danger"><span class="val">${historyFindings.length}</span>IN GIT HISTORY</div>` : ''}
         <div class="stat ok"><span class="val">${filesScanned}</span>FILES SCANNED</div>
       </div>
     </div>`;
 
-  const sorted = [...findings].sort((a, b) => a.severity === 'danger' ? -1 : 1);
+  if (findings.length) {
+    const sorted = [...findings].sort((a, b) => a.severity === 'danger' ? -1 : 1);
+    sorted.forEach((f, i) => {
+      html += `
+      <div class="finding ${esc(f.severity)}" id="f${i}">
+        <div class="finding-header" onclick="toggle(${i})">
+          <span class="sev-tag">${f.severity === 'danger' ? 'CRITICAL' : 'WARNING'}</span>
+          <span class="finding-name">${esc(f.pattern)}</span>
+          <span class="finding-file">${esc(f.file)}</span>
+          <span class="finding-chevron">▶</span>
+        </div>
+        <div class="finding-body">
+          <div class="code-block" data-file="${esc(f.file)}" data-line="${esc(String(f.line))}">${esc(f.snippet)}</div>
+          <div class="fix-block">${esc(f.fix)}</div>
+        </div>
+      </div>`;
+    });
+  }
 
-  sorted.forEach((f, i) => {
+  if (historyFindings.length) {
     html += `
-    <div class="finding ${esc(f.severity)}" id="f${i}">
-      <div class="finding-header" onclick="toggle(${i})">
-        <span class="sev-tag">${f.severity === 'danger' ? 'CRITICAL' : 'WARNING'}</span>
-        <span class="finding-name">${esc(f.pattern)}</span>
-        <span class="finding-file">${esc(f.file)}</span>
-        <span class="finding-chevron">▶</span>
-      </div>
-      <div class="finding-body">
-        <div class="code-block" data-file="${esc(f.file)}" data-line="${esc(String(f.line))}">${esc(f.snippet)}</div>
-        <div class="fix-block">${esc(f.fix)}</div>
+    <div class="summary-header" style="margin-top:20px;">
+      <div class="s-title">⏱ GIT HISTORY FINDINGS — ${histDangers} CRITICAL</div>
+      <div class="clean-sub" style="margin-top:6px;">
+        these secrets were committed at some point and remain permanently in git history,
+        even if the current version of the file no longer contains them.
+        rotating/revoking the credential is required — deleting the file is not enough.
       </div>
     </div>`;
-  });
+    historyFindings.forEach((f, i) => {
+      html += `
+      <div class="finding ${esc(f.severity)}" id="h${i}">
+        <div class="finding-header" onclick="toggle('h${i}')">
+          <span class="sev-tag">${f.severity === 'danger' ? 'CRITICAL' : 'WARNING'}</span>
+          <span class="finding-name">${esc(f.pattern)}</span>
+          <span class="finding-file">${esc(f.file)} @ ${esc(f.commitSha)}</span>
+          <span class="finding-chevron">▶</span>
+        </div>
+        <div class="finding-body">
+          <div class="code-block" data-file="${esc(f.file)}" data-line="${esc(String(f.line))}">${esc(f.snippet)}</div>
+          <div class="fix-block">
+            ${esc(f.fix)}<br/>
+            <span style="color:var(--muted)">commit ${esc(f.commitSha)} by ${esc(f.author)} on ${esc((f.commitDate||'').substring(0,10))} — "${esc(f.commitMsg)}"</span>
+          </div>
+        </div>
+      </div>`;
+    });
+  }
 
   container.innerHTML = html;
 }
 
-function toggle(i) { document.getElementById('f' + i).classList.toggle('open'); }
+function toggle(id) {
+  const elId = typeof id === 'number' ? 'f' + id : id;
+  document.getElementById(elId).classList.toggle('open');
+}
 
 // ─── EXPORT TXT ───────────────────────────────────────────────────────────────
 let lastScanData = null;
 
 function exportTXT() {
   if (!lastScanData) return;
-  const { findings, filesScanned, owner, repo } = lastScanData;
+  const { findings, historyFindings = [], filesScanned, owner, repo } = lastScanData;
   const now = new Date().toISOString();
   const lines = [];
   lines.push('='.repeat(60));
@@ -635,9 +831,9 @@ function exportTXT() {
   lines.push('');
   lines.push('TARGET     : ' + owner + '/' + repo);
   lines.push('SCANNED    : ' + filesScanned + ' files');
-  lines.push('FINDINGS   : ' + findings.length + ' issue(s)');
+  lines.push('FINDINGS   : ' + findings.length + ' live issue(s), ' + historyFindings.length + ' git history issue(s)');
   lines.push('DATE       : ' + now);
-  lines.push('TOOL       : LeakGuard v1.0.0');
+  lines.push('TOOL       : LeakGuard v1.1.0');
   lines.push('');
   lines.push('DISCLAIMER : For own-repo auditing only. Unauthorized scanning');
   lines.push('             may violate GitHub ToS and local laws.');
@@ -678,6 +874,23 @@ function exportTXT() {
       });
     }
   }
+  if (historyFindings.length) {
+    lines.push('-'.repeat(60));
+    lines.push('');
+    lines.push('[GIT HISTORY] ' + historyFindings.length + ' secret(s) found in past commits:');
+    lines.push('(still permanently in git history even if removed from current files —');
+    lines.push(' rotating the credential is required, deleting the file is not enough)');
+    lines.push('');
+    historyFindings.forEach((f, i) => {
+      lines.push('  ' + (i+1) + '. ' + f.pattern);
+      lines.push('     File    : ' + f.file);
+      lines.push('     Commit  : ' + f.commitSha + ' by ' + f.author + ' on ' + (f.commitDate || '').substring(0,10));
+      lines.push('     Message : ' + f.commitMsg);
+      lines.push('     Snippet : ' + f.snippet);
+      lines.push('     Fix     : ' + f.fix);
+      lines.push('');
+    });
+  }
   lines.push('='.repeat(60));
   lines.push('  END OF REPORT - LeakGuard by @ParkSoju-ai');
   lines.push('='.repeat(60));
@@ -710,6 +923,10 @@ async function startScan() {
     return;
   }
 
+  const token        = document.getElementById('tokenInput').value.trim() || null;
+  const wantHistory  = document.getElementById('historyToggle').checked;
+  const historyLimit = parseInt(document.getElementById('historyDepth').value, 10);
+
   btn.disabled = true;
   btn.textContent = '[ SCANNING... ]';
   results.innerHTML = '';
@@ -725,7 +942,7 @@ async function startScan() {
     addLog(`[*] Connecting to GitHub API...`, 'info');
     setProgress(5, '[*] Fetching file tree...');
 
-    const tree     = await fetchTree(parsed.owner, parsed.repo);
+    const tree     = await fetchTree(parsed.owner, parsed.repo, token);
     const scannable = tree.filter(f => !shouldSkip(f.path));
     const priority  = scannable.filter(f => PRIORITY.some(p => f.path.endsWith(p)));
     const rest      = scannable.filter(f => !PRIORITY.some(p => f.path.endsWith(p)));
@@ -737,12 +954,14 @@ async function startScan() {
 
     const allFindings = [];
     let done = 0;
+    const historyBudget = wantHistory ? 90 : 85;
+    const liveBudget = wantHistory ? 45 : 85;
 
     for (const file of ordered) {
-      setProgress(10 + Math.round((done / ordered.length) * 85), `[*] Scanning: ${file.path}`);
+      setProgress(10 + Math.round((done / ordered.length) * liveBudget), `[*] Scanning: ${file.path}`);
       if (done % 5 === 0) addLog(`[~] ${file.path}`, '');
 
-      const content = await fetchFile(parsed.owner, parsed.repo, file.path);
+      const content = await fetchFile(parsed.owner, parsed.repo, file.path, token);
       if (content) {
         const hits = scanContent(content, file.path);
         if (hits.length) {
@@ -754,12 +973,24 @@ async function startScan() {
       await new Promise(r => setTimeout(r, 40));
     }
 
+    let historyFindings = [];
+    if (wantHistory) {
+      addLog(`[*] Starting git history scan (last ${historyLimit} commits)...`, 'info');
+      if (!token) addLog(`[!] No token provided — history scan may hit the rate limit quickly.`, 'warn');
+      historyFindings = await scanGitHistory(parsed.owner, parsed.repo, token, historyLimit, (i, total, sha) => {
+        setProgress(10 + liveBudget + Math.round((i / Math.max(total,1)) * (historyBudget - liveBudget)), `[*] Scanning commit ${sha} (${i + 1}/${total})`);
+        if (i % 5 === 0) addLog(`[~] commit ${sha}`, '');
+      });
+      historyFindings.forEach(h => addLog(`[!] HISTORY: ${h.pattern} in ${h.file} @ ${h.commitSha}`, 'warn'));
+      addLog(`[+] History scan done. ${historyFindings.length} finding(s) in past commits.`, historyFindings.length ? 'warn' : 'ok');
+    }
+
     setProgress(100, '[+] Scan complete.');
-    addLog(`[+] Done. ${allFindings.length} issue(s) found across ${done} files.`, allFindings.length ? 'warn' : 'ok');
+    addLog(`[+] Done. ${allFindings.length} live issue(s), ${historyFindings.length} history issue(s).`, (allFindings.length || historyFindings.length) ? 'warn' : 'ok');
     setTimeout(() => { prog.style.display = 'none'; }, 1500);
-    lastScanData = { findings: allFindings, filesScanned: ordered.length, owner: parsed.owner, repo: parsed.repo };
+    lastScanData = { findings: allFindings, historyFindings, filesScanned: ordered.length, owner: parsed.owner, repo: parsed.repo };
     document.getElementById('exportBar').style.display = 'block';
-    renderResults(allFindings, ordered.length, parsed.owner, parsed.repo);
+    renderResults(allFindings, historyFindings, ordered.length, parsed.owner, parsed.repo);
 
   } catch (err) {
     prog.style.display = 'none';
@@ -773,6 +1004,10 @@ async function startScan() {
 
 document.getElementById('repoInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') startScan();
+});
+
+document.getElementById('historyToggle').addEventListener('change', e => {
+  document.getElementById('historyDepthRow').style.display = e.target.checked ? 'flex' : 'none';
 });
 </script>
 </body>

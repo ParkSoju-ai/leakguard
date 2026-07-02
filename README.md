@@ -50,11 +50,13 @@ LeakGuard is a free, open-source browser tool that scans public GitHub repositor
 - ✅ **100% browser-based** — no server, no backend, no data stored
 - ✅ **No login required** — works with any public GitHub repo
 - ✅ **20+ secret patterns** detected
-- ✅ **Shows exact file + line number** of each issue
+- ✅ **Git history scan** — finds secrets that were committed and later deleted, since they remain permanently in git history even after removal from the current code
+- ✅ **Optional GitHub token** — raises the API limit from 60 → 5,000 requests/hour and enables scanning your own private repos; the token stays in memory for the session only and is never stored, logged, or sent anywhere but `api.github.com`
+- ✅ **Shows exact file + line number** of each issue, plus commit SHA/author/date for history findings
 - ✅ **Tells you how to fix** every finding
-- ✅ **Scans up to 80 files** per repo via GitHub's free public API
+- ✅ **Scans up to 80 files** per repo via GitHub's public API
 - ✅ **Prioritizes sensitive files** like `.env`, `config.js`, `secrets.js`
-- ⚠️ **GitHub API limit** — unauthenticated scans are limited to 60 requests/hour. For large repos, wait 1 hour between scans.
+- ⚠️ **GitHub API limit** — unauthenticated scans are limited to 60 requests/hour. Git history scanning uses roughly 1 request per commit checked, so it can exhaust the free limit quickly — add a personal access token to scan comfortably.
 
 ---
 
@@ -62,8 +64,10 @@ LeakGuard is a free, open-source browser tool that scans public GitHub repositor
 
 1. Go to **[ParkSoju-ai.github.io/leakguard](https://ParkSoju-ai.github.io/leakguard)**
 2. Paste your GitHub repo URL (e.g. `https://github.com/yourname/yourrepo`)
-3. Click **[ EXECUTE SCAN ]**
-4. Review findings and follow the fix instructions
+3. *(Optional)* Check **"Include Git History Scan"** to also check past commits for secrets that were deleted from the current code
+4. *(Optional)* Paste a [personal access token](https://github.com/settings/tokens) to raise the rate limit and enable private-repo scanning — it's free, stays in your browser's memory only, and is used solely for requests to `api.github.com`
+5. Click **[ EXECUTE SCAN ]**
+6. Review findings and follow the fix instructions
 
 That's it — no install, no sign up, no tracking.
 
@@ -86,8 +90,9 @@ No dependencies. No build step. Pure HTML/CSS/JS.
 ## 🔒 Privacy
 
 - LeakGuard runs **entirely in your browser**
-- It only reads **publicly accessible files** via GitHub's API
-- It does **not store, log, or transmit** any data
+- It only reads **publicly accessible files and commits** via GitHub's API, or private repo data you explicitly authorize with your own token
+- If provided, your GitHub token is held **only in browser memory for that session** — never stored, logged, written to disk, or sent to anything but `api.github.com`
+- It does **not store, log, or transmit** any scan data
 - No cookies, no analytics, no tracking
 
 ---
